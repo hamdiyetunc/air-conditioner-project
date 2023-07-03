@@ -1,29 +1,26 @@
 class EventEmitter {
-    private subscriptions: Record<string, Function[]> = {};
-  
-    subscribe(event: string, callback: Function) {
-      if (!this.subscriptions[event]) {
-        this.subscriptions[event] = [];
-      }
-      this.subscriptions[event].push(callback);
+  private subscriptions: Record<string, Function[]> = {};
+
+  subscribe(event: string, callback: Function) {
+    if (!this.subscriptions[event]) {
+      this.subscriptions[event] = [];
     }
-  
-    unsubscribe(event: string, callback: Function) {
-      if (!this.subscriptions[event]) {
-        return;
-      }
-      this.subscriptions[event] = this.subscriptions[event].filter(
-        (cb) => cb !== callback
-      );
-    }
-  
-    emit(event: string, data: unknown) {
-      if (!this.subscriptions[event]) {
-        return;
-      }
-      this.subscriptions[event].forEach((cb) => cb(data));
+    this.subscriptions[event].push(callback);
+  }
+
+  unsubscribe(event: string) {
+    if (this.subscriptions[event]) {
+      this.subscriptions[event] = [];
     }
   }
+
+  emit(event: string, data: unknown) {
+    if (!this.subscriptions[event]) {
+      return;
+    }
+    this.subscriptions[event].forEach((cb) => cb(data));
+  }
+}
   
   class AirConditioner {
     private eventEmitter: EventEmitter = new EventEmitter();
@@ -61,7 +58,7 @@ class EventEmitter {
   
     onChange(callback: (degree: number) => void) {
       this.eventEmitter.subscribe("degree-change", callback);
-      return () => this.eventEmitter.unsubscribe("degree-change", callback);
+      return () => this.eventEmitter.unsubscribe("degree-change");
     }
   }
   

@@ -8,11 +8,10 @@ var EventEmitter = /** @class */ (function () {
         }
         this.subscriptions[event].push(callback);
     };
-    EventEmitter.prototype.unsubscribe = function (event, callback) {
-        if (!this.subscriptions[event]) {
-            return;
+    EventEmitter.prototype.unsubscribe = function (event) {
+        if (this.subscriptions[event]) {
+            this.subscriptions[event] = [];
         }
-        this.subscriptions[event] = this.subscriptions[event].filter(function (cb) { return cb !== callback; });
     };
     EventEmitter.prototype.emit = function (event, data) {
         if (!this.subscriptions[event]) {
@@ -62,7 +61,7 @@ var AirConditioner = /** @class */ (function () {
     AirConditioner.prototype.onChange = function (callback) {
         var _this = this;
         this.eventEmitter.subscribe("degree-change", callback);
-        return function () { return _this.eventEmitter.unsubscribe("degree-change", callback); };
+        return function () { return _this.eventEmitter.unsubscribe("degree-change"); };
     };
     return AirConditioner;
 }());
