@@ -1,7 +1,9 @@
-class EventEmitter {
-  private subscriptions: Record<string, Function[]> = {};
+type Callback = (data: unknown) => void;
 
-  subscribe(event: string, callback: Function) {
+class EventEmitter {
+  private subscriptions: Record<string, Callback[]> = {};
+
+  subscribe(event: string, callback: Callback) {
     if (!this.subscriptions[event]) {
       this.subscriptions[event] = [];
     }
@@ -15,65 +17,61 @@ class EventEmitter {
   }
 
   emit(event: string, data: unknown) {
-    if (!this.subscriptions[event]) {
-      return;
+    const callbacks = this.subscriptions[event];
+    if (callbacks) {
+      callbacks.forEach((cb) => cb(data));
     }
-    this.subscriptions[event].forEach((cb) => cb(data));
   }
 }
-  
-  class AirConditioner {
-    private eventEmitter: EventEmitter = new EventEmitter();
-    private _temperature: number = 25;
-    private _degree: number = 0;
-  
-    constructor() {
-      setInterval(() => this.adjustDegree(), 1000);
-    }
-  
-    get temperature() {
-      return this._temperature;
-    }
-  
-    set temperature(value: number) {
-      this._temperature = value;
-    }
-  
-    get degree() {
-      return this._degree;
-    }
-  
-    set degree(value: number) {
-      this._degree = value;
-      this.eventEmitter.emit("degree-change", this.degree);
-    }
-  
-    private adjustDegree() {
-      if (this.temperature > 25) {
-        this.degree += 1;
-      } else if (this.temperature < 23) {
-        this.degree -= 1;
-      }
-    }
-  
-    onChange(callback: (degree: number) => void) {
-      this.eventEmitter.subscribe("degree-change", callback);
-      return () => this.eventEmitter.unsubscribe("degree-change");
-    }
+
+class TemperatureSensor {
+  private temperature: number = 25;
+  private readonly eventEmitter: EventEmitter;
+
+  constructor(eventEmitter: EventEmitter) {
+    this.eventEmitter = eventEmitter;
+    setInterval(this.updateTemperature.bind(this), 2000);
   }
-  
-  function main() {
-    const airConditioner = new AirConditioner();
-  
-    // Simulate temperature changes
-    setInterval(() => {
-      const randomTemperature = Math.floor(Math.random() * 10) + 20;
-      airConditioner.temperature = randomTemperature;
-    }, 2000);
-  
-    airConditioner.onChange((degree) =>
-      console.log(`Air conditioning degree changed: ${degree}`)
-    );
+
+  private updateTemperature() {
+    const randomTemperature = Math.floor(Math.random() * 10) + 20;
+    this.temperature = randomTemperature;
+    this.eventEmitter.emit("temperature-change", this.temperature);
   }
-  
-  main();
+}
+
+class AirConditioner {
+  private degree: number = 0;
+  private readonly eventEmitter: EventEmitter;
+
+  constructor(eventEmitter: EventEmitter) {
+    this.eventEmitter = eventEmitter;
+    this.eventEmitter.subscribe("temperature-change", this.adjustDegree.bind(this));
+  }
+
+  private adjustDegree(temperature: number) {
+    if (temperature > 25) {
+      this.degree += 1;
+    } else if (temperature < 23) {
+      this.degree -= 1;
+    }
+    this.eventEmitter.emit("degree-change", this.degree);
+  }
+
+  onChange(callback: Callback) {
+    this.eventEmitter.subscribe("degree-change", callback);
+    return () => this.eventEmitter.unsubscribe("degree-change");
+  }
+}
+
+function main() {
+  const eventEmitter = new EventEmitter();
+  const temperatureSensor = new TemperatureSensor(eventEmitter);
+  const airConditioner = new AirConditioner(eventEmitter);
+
+  airConditioner.onChange((degree) =>
+    console.log(`Air conditioning degree changed: ${degree}`)
+  );
+}
+
+main();

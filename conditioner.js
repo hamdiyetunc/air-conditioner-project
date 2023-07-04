@@ -14,49 +14,40 @@ var EventEmitter = /** @class */ (function () {
         }
     };
     EventEmitter.prototype.emit = function (event, data) {
-        if (!this.subscriptions[event]) {
-            return;
+        var callbacks = this.subscriptions[event];
+        if (callbacks) {
+            callbacks.forEach(function (cb) { return cb(data); });
         }
-        this.subscriptions[event].forEach(function (cb) { return cb(data); });
     };
     return EventEmitter;
 }());
-var AirConditioner = /** @class */ (function () {
-    function AirConditioner() {
-        var _this = this;
-        this.eventEmitter = new EventEmitter();
-        this._temperature = 25;
-        this._degree = 0;
-        setInterval(function () { return _this.adjustDegree(); }, 1000);
+var TemperatureSensor = /** @class */ (function () {
+    function TemperatureSensor(eventEmitter) {
+        this.temperature = 25;
+        this.eventEmitter = eventEmitter;
+        setInterval(this.updateTemperature.bind(this), 2000);
     }
-    Object.defineProperty(AirConditioner.prototype, "temperature", {
-        get: function () {
-            return this._temperature;
-        },
-        set: function (value) {
-            this._temperature = value;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(AirConditioner.prototype, "degree", {
-        get: function () {
-            return this._degree;
-        },
-        set: function (value) {
-            this._degree = value;
-            this.eventEmitter.emit("degree-change", this.degree);
-        },
-        enumerable: false,
-        configurable: true
-    });
-    AirConditioner.prototype.adjustDegree = function () {
-        if (this.temperature > 25) {
+    TemperatureSensor.prototype.updateTemperature = function () {
+        var randomTemperature = Math.floor(Math.random() * 10) + 20;
+        this.temperature = randomTemperature;
+        this.eventEmitter.emit("temperature-change", this.temperature);
+    };
+    return TemperatureSensor;
+}());
+var AirConditioner = /** @class */ (function () {
+    function AirConditioner(eventEmitter) {
+        this.degree = 0;
+        this.eventEmitter = eventEmitter;
+        this.eventEmitter.subscribe("temperature-change", this.adjustDegree.bind(this));
+    }
+    AirConditioner.prototype.adjustDegree = function (temperature) {
+        if (temperature > 25) {
             this.degree += 1;
         }
-        else if (this.temperature < 23) {
+        else if (temperature < 23) {
             this.degree -= 1;
         }
+        this.eventEmitter.emit("degree-change", this.degree);
     };
     AirConditioner.prototype.onChange = function (callback) {
         var _this = this;
@@ -66,12 +57,9 @@ var AirConditioner = /** @class */ (function () {
     return AirConditioner;
 }());
 function main() {
-    var airConditioner = new AirConditioner();
-    // Simulate temperature changes
-    setInterval(function () {
-        var randomTemperature = Math.floor(Math.random() * 10) + 20;
-        airConditioner.temperature = randomTemperature;
-    }, 2000);
+    var eventEmitter = new EventEmitter();
+    var temperatureSensor = new TemperatureSensor(eventEmitter);
+    var airConditioner = new AirConditioner(eventEmitter);
     airConditioner.onChange(function (degree) {
         return console.log("Air conditioning degree changed: ".concat(degree));
     });
