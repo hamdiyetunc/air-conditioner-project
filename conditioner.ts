@@ -27,11 +27,9 @@ class EventEmitter {
 class TemperatureSensor {
   private temperature: number = 25;
   private readonly eventEmitter: EventEmitter;
-  private readonly database: Database;
 
   constructor(eventEmitter: EventEmitter, database: Database) {
     this.eventEmitter = eventEmitter;
-    this.database = database;
     setInterval(this.updateTemperature.bind(this), 2000);
   }
 
@@ -39,29 +37,30 @@ class TemperatureSensor {
     const randomTemperature = Math.floor(Math.random() * 10) + 20;
     this.temperature = randomTemperature;
     this.eventEmitter.emit("temperature-change", this.temperature);
-    this.database.saveTemperature(this.temperature);
+  }
+
+  onChange(callback: Callback) {
+    this.eventEmitter.subscribe("temperature-change", callback);
+    return () => this.eventEmitter.unsubscribe("temperature-change");
   }
 }
 
 class AirConditioner {
   private degree: number = 0;
   private readonly eventEmitter: EventEmitter;
-  private readonly database: Database;
 
   constructor(eventEmitter: EventEmitter, database: Database) {
     this.eventEmitter = eventEmitter;
-    this.database = database;
     this.eventEmitter.subscribe("temperature-change", this.adjustDegree.bind(this));
   }
 
-  private adjustDegree(temperature: number) {
+  public adjustDegree(temperature: number) {
     if (temperature > 25) {
       this.degree += 1;
     } else if (temperature < 23) {
       this.degree -= 1;
     }
-    this.eventEmitter.emit("degree-change", this.degree);
-    this.database.saveDegree(this.degree);
+    this.eventEmitter.emit("degree-change", this.degree); // Corrected event name
   }
 
   onChange(callback: Callback) {
@@ -71,19 +70,15 @@ class AirConditioner {
 }
 
 class Database {
-  private temperature: number = 25;
-  private degree: number = 0;
-
-  saveTemperature(temperature: number) {
-    this.temperature = temperature;
-    // Code to save temperature to the database
-    console.log(`Temperature saved to database: ${temperature}`);
-  }
-
-  saveDegree(degree: number) {
-    this.degree = degree;
-    // Code to save degree to the database
-    console.log(`Degree saved to database: ${degree}`);
+  save(data: { temperature?: number; degree?: number }) {
+    if (data.temperature !== undefined) {
+      // Code to save temperature to the database
+      console.log(`Temperature saved to database: ${data.temperature}`);
+    }
+    if (data.degree !== undefined) {
+      // Code to save degree to the database
+      console.log(`Degree saved to database: ${data.degree}`);
+    }
   }
 }
 

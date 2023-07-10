@@ -25,14 +25,17 @@ var TemperatureSensor = /** @class */ (function () {
     function TemperatureSensor(eventEmitter, database) {
         this.temperature = 25;
         this.eventEmitter = eventEmitter;
-        this.database = database;
         setInterval(this.updateTemperature.bind(this), 2000);
     }
     TemperatureSensor.prototype.updateTemperature = function () {
         var randomTemperature = Math.floor(Math.random() * 10) + 20;
         this.temperature = randomTemperature;
         this.eventEmitter.emit("temperature-change", this.temperature);
-        this.database.saveTemperature(this.temperature);
+    };
+    TemperatureSensor.prototype.onChange = function (callback) {
+        var _this = this;
+        this.eventEmitter.subscribe("temperature-change", callback);
+        return function () { return _this.eventEmitter.unsubscribe("temperature-change"); };
     };
     return TemperatureSensor;
 }());
@@ -40,7 +43,6 @@ var AirConditioner = /** @class */ (function () {
     function AirConditioner(eventEmitter, database) {
         this.degree = 0;
         this.eventEmitter = eventEmitter;
-        this.database = database;
         this.eventEmitter.subscribe("temperature-change", this.adjustDegree.bind(this));
     }
     AirConditioner.prototype.adjustDegree = function (temperature) {
@@ -50,8 +52,7 @@ var AirConditioner = /** @class */ (function () {
         else if (temperature < 23) {
             this.degree -= 1;
         }
-        this.eventEmitter.emit("degree-change", this.degree);
-        this.database.saveDegree(this.degree);
+        this.eventEmitter.emit("degree-change", this.degree); // Corrected event name
     };
     AirConditioner.prototype.onChange = function (callback) {
         var _this = this;
@@ -62,18 +63,16 @@ var AirConditioner = /** @class */ (function () {
 }());
 var Database = /** @class */ (function () {
     function Database() {
-        this.temperature = 25;
-        this.degree = 0;
     }
-    Database.prototype.saveTemperature = function (temperature) {
-        this.temperature = temperature;
-        // Code to save temperature to the database
-        console.log("Temperature saved to database: ".concat(temperature));
-    };
-    Database.prototype.saveDegree = function (degree) {
-        this.degree = degree;
-        // Code to save degree to the database
-        console.log("Degree saved to database: ".concat(degree));
+    Database.prototype.save = function (data) {
+        if (data.temperature !== undefined) {
+            // Code to save temperature to the database
+            console.log("Temperature saved to database: ".concat(data.temperature));
+        }
+        if (data.degree !== undefined) {
+            // Code to save degree to the database
+            console.log("Degree saved to database: ".concat(data.degree));
+        }
     };
     return Database;
 }());
